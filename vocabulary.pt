@@ -1,0 +1,227 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      xmlns:tal="http://xml.zope.org/namespaces/tal">
+  <head>
+    <title>VDEX Editor</title>
+      <script src='static/jquery.js' type='text/javascript'></script>
+      <script src='static/jquery-ui.js' type='text/javascript'></script>
+      <script src='static/jquery.cookie.js' type='text/javascript'></script>
+      
+      <link rel='stylesheet' type='text/css' href='static/ui.dynatree.css'></link>
+      <link rel='stylesheet' type='text/css' href='static/screen.css'></link>
+      <link rel='stylesheet' type='text/css' href='static/smoothness/jquery-ui-1.8.16.custom.css'></link>
+      <script src='static/jquery.dynatree.js' type='text/javascript'></script>
+        
+
+  </head>
+  <body>
+    <div class="container">
+      <div id="header" class="span-24 last">
+        <h1 class="prepend-4"><a href="/">VDEX Editor</a></h1>
+      </div>
+
+      <div id="content" class="span-24 last" 
+           tal:define="getnote request.GET.get('notification', ''); 
+                       notes request.environ.get('notification', []);
+                       notifications getnote and notes.append(getnote) or notes">
+        <ul id="notifications" tal:condition="notifications">
+          
+          <li tal:repeat="note notifications" tal:content="note"></li>
+        </ul>
+        
+        <div id="vocabulary" json_ref="${json_url}">
+          <div id="tabs">
+            <ul>
+              <li><a href="#tabs-1">Tree</a></li>
+              <li><a href="#tabs-2">Table</a></li>
+            </ul>
+            <div id="tabs-1">
+              <div class="span-8">
+                <div id="tree">
+                </div>
+              </div>
+              <div class="span-8 last">
+                <div id="tree_preview">
+                </div>
+              </div>
+              <hr class="space"/>
+            </div>
+            <div id="tabs-2">
+              <table id="vocabulary_table">
+                <thead>
+                  <tr tal:repeat="row view.rows[0:1]">
+                    <th tal:repeat="cell row">${cell}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr tal:repeat="row view.rows[1:]">
+                    <td tal:repeat="cell row">${cell}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <hr class="space" />
+            </div>
+          </div>
+          <div id="save" class="">
+            <form id="csv_update" action="${save_url}" method="post">
+              <fieldset>
+                <div class="info explanation">
+                  You are seeing your test configuration on the right hand side tree and
+                  the table. If you like what your are seeing, you can save your changes
+                  by clicking on Save now.
+                </div>
+                <input type="hidden" name="new_data" id="xml_input" />
+                <input type="submit" id="form_save_new" name="form.save_new" value=" Save " />
+              </fieldset>
+            </form>
+          </div>
+          <div id="csv" class="">
+            <form id='csv_form' action="${request.resource_url(context)}" method="post">
+              <fieldset>
+                <textarea wrap="off" id="csv_input" name="csv_input">${view.csv}</textarea>
+                <div class="info explanation">
+                  Submitting these changes will not update the vocabulary. Instead you will see
+                  the results of your changes in the right hand side tree, and in the table.
+                </div>
+                <input id="form_csv" type="submit" name="form.csv" value=" Test " />
+              </fieldset>
+            </form>
+          </div>
+          <div id="file_upload" class="span-18 last">
+            <form id="file_upload_form" method="post" enctype="multipart/form-data" action="${request.resource_url(context, 'upload')}">
+          <fieldset>
+            <input name="file" id="file" type="file" />
+            <div>
+              <ul>
+                <li>
+                  <a href="${export_vdex_url}">Download as VDEX</a>
+                </li>
+                <li>
+                  <a href="${export_xls_url}">Download as Excel</a>
+                </li>
+                <li>
+                  <a href="${export_csv_url}">Download as CSV</a>
+                </li>
+              </ul>
+            </div>
+            <div class="info explanation">
+              You can submit a correctly formatted excel, csv or xml file. This will not update, the
+              vocabulary. INstead you will see the results of your changes in the right hand side tree and
+              in the table, like the csv textarea above. The textarea will also be updated. Please
+              keep in mind that modifying and testing the csv data above might result in a loss
+              of attributes that can be provided by an xml vdex file. The conversion from excel
+              to csv will loose some information.
+            </div>
+                    <input type="submit" name="form.file_upload" value=" Test Upload " />
+                    <iframe id="upload_target" name="upload_target" src="" style="display:None" ><h1>Test</h1></iframe>
+          </fieldset>
+            </form>
+          </div>
+        </div>
+        </div>
+	<div>&nbsp;</div>
+        
+	<div id="footer" class="span-24 last">
+        </div>
+        
+      </div>
+      
+    <script type="text/javascript">
+    //<![CDATA[
+(function($){
+    $(document).ready(function(){
+        var csv_input = $('#csv_input');
+        var xml_input = $('#xml_input');
+        var json_url = $('#vocabulary').attr('json_ref');
+
+        // Tabs init
+        $('#tabs').tabs();
+
+        // Trees Functionality
+        var tree_preview = $('#tree_preview');
+        $('#tree').dynatree({
+            initAjax:{url:json_url,
+                      data:{}},
+            ajaxDefaults:{'type' : 'post'}
+        });
+        tree_preview.dynatree({
+            initAjax:{url:json_url,
+                      data:{}},
+            ajaxDefaults:{'type' : 'post'}
+        });
+        $(document).bind('test_csv', function(){
+            tree_preview.dynatree('option', 'initAjax', {url:json_url,
+                                                         data:{'preview': csv_input.val(),
+                                                               'preview_tree' : true}});
+            tree_preview.dynatree('getTree').reload();
+        });
+
+        // CSV Form functionality
+        $('#form_csv').click(function(){
+            $.ajax({'url' : json_url,
+                    'data' : {'preview':csv_input.val(),
+                    'preview_xml' : true},
+                    'type' : 'post',
+                    'success':function(xml){
+                                xml_input.val(xml);
+                              }
+            });
+            $(this).trigger('test_csv');
+            return false;
+        });
+
+        // Final save functionality
+        $('#save').hide()
+        $(document).bind('test_csv', function(){
+            $('#save').show();
+        });
+
+        // File upload functionality
+        // When somebody uploads a file, it gets forwarded to the view that returns
+        // the data like csv data. This gets added to the csv field.
+        // When we trigger the test_csv event that renders the contents
+        // of the csv field.
+        $('#file_upload_form').submit(function(){
+            this.target = 'upload_target';
+        });
+        $('#upload_target').load(function(){
+            var data = $(this).contents().find('body')
+            if(data.find('csv').length){
+                csv_input.val($.parseJSON(data.find('csv').html()));
+                xml_input.val(data.find('xml').html());
+                $(this).trigger('test_csv');
+            }
+        });
+
+        // Table update functionality
+        $(document).bind('test_csv', function(){
+            $.ajax({'url' : json_url,
+                    'data' : {'preview':csv_input.val(),
+                    'preview_table' : true},
+                    'type' : 'post',
+                    'success':function(rows){
+                                var tbody = $("#vocabulary_table tbody");
+                                var thead = $("#vocabulary_table thead");
+                                tbody.children().remove();
+                                thead.children().remove();
+                                var row = $('<tr></tr>');
+                                for(var y=0;y< rows[0].length;y++){
+                                    row.append('<th>' + rows[0][y] + '</th>')
+                                }
+                                thead.append(row);
+                                for(var x=1;x < rows.length;x++){
+                                    var row = $('<tr></tr>');
+                                    for(var y=0;y < rows[x].length;y++){
+                                        row.append('<td>' + rows[x][y] + '</td>');
+                                    }
+                                    tbody.append(row);
+                                }
+                              }
+            });
+        });
+    });
+})(jQuery);
+    //]]>
+    </script>
+  </body>
+</html>
