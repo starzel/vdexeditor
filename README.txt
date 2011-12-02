@@ -21,3 +21,10 @@ TODO
 [ ] Allow direct modifications of dynatree presentation
 [ ] Allow to choose which language to display vdex
 [ ] Explain UI in webapp itself
+
+LICENSE
+=======
+This tool is licensed under the MIT License.
+
+This tool comes bundled with jquery, jqueryui, dynatree, blueprint css framework
+Which are either MIT and GPLv2 dual licensed, or MIT licensed.
